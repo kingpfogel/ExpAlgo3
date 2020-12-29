@@ -7,6 +7,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <execution>
 
 template<typename F>
 void read_graph_unweighted(std::istream &ins, F fn) {
@@ -75,7 +76,87 @@ csr_matrix coordinates_to_csr(unsigned int n,
 	return mat;
 }
 
-int main(int argc, char **argv) {
+
+
+bool comp_first(const std::pair<unsigned int, unsigned int> &a, const std::pair<unsigned int, unsigned int> &b)
+{
+//    return (std::get<0>(a) < std::get<0>(b));
+    return a.first < b.first;
+}
+
+csr_matrix transpose(csr_matrix matrix)
+{
+    auto &ind = matrix.ind;
+    auto &cols = matrix.cols;
+    auto &weights = matrix.weights;
+
+    std::vector<unsigned int> tmp_new_cols(cols.size());
+    for(unsigned i = 0; i < ind.size()-1; ++i)
+    {
+        for(unsigned c = 0; c < ind[i+1]-ind[i]; ++c)
+        {
+            tmp_new_cols[ind[i]+c] = i;
+        }
+    }
+
+    std::vector<std::pair<unsigned int, std::pair<unsigned int, float>>> target(cols.size());
+    for (unsigned i = 0; i < target.size(); i++){
+        target[i] = std::make_pair(cols[i], std::make_pair(tmp_new_cols[i], weights[i]));
+    }
+
+    std::sort(target.begin(), target.end(), comp_first);
+    std::vector<unsigned int> new_cols;
+    std::vector<float> reordered_weights;
+
+    std::transform(target.begin(), target.end(),
+                   std::back_inserter(new_cols),
+//                   [](auto const& pair){ return std::get<1>(pair); });
+                   [](auto const& pair){ return pair.second.first; });
+    std::transform(target.begin(), target.end(),
+                   std::back_inserter(reordered_weights),
+//                   [](auto const& pair){ return std::get<2>(pair); });
+                   [](auto const& pair){ return pair.second.second; });
+
+
+
+    std::sort(cols.begin(), cols.end());
+    unsigned int uniqueCount = std::unique(cols.begin(), cols.end()) - cols.begin();
+    std::vector<unsigned int> new_ind;
+    new_ind.resize(uniqueCount, 0);
+    for(unsigned i = 0; i < cols.size(); ++i){
+        std::vector<unsigned int> ones(ind.size()-cols[i]+1 ,1);
+        std::transform (new_ind.begin()+cols[i]+1, new_ind.end(), ones.begin(), new_ind.begin()+cols[i]+1, std::plus<int>());
+    }
+
+    matrix.weights = reordered_weights;
+    matrix.cols = new_cols;
+    matrix.ind = new_ind;
+    return matrix;
+}
+
+int main() {
+    csr_matrix m;
+    m.cols = {0,1,1,3,2,3,4,5};
+    m.weights = {10.,20.,30.,40.,50.,60.,70.,80.};
+    m.ind = {0,2,4,7,8};
+    for(auto & i: m.ind){
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+
+    for(auto & i: m.cols){
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+
+    for(auto & i: m.weights){
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+    return (int)0;
+}
+
+int main2(int argc, char **argv) {
 	std::ifstream ins("foodweb-baydry.konect");
 	std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
 	std::mt19937 prng{42};
@@ -99,4 +180,5 @@ int main(int argc, char **argv) {
 	auto mat = coordinates_to_csr(n, std::move(cv));
 
 	std::cout << mat.n << " " << mat.m << std::endl;
+	return 0;
 }
