@@ -8,6 +8,7 @@
 #include <tuple>
 #include <vector>
 #include <execution>
+#include "d_ary_addressable_int_heap.hpp"
 
 template<typename F>
 void read_graph_unweighted(std::istream &ins, F fn) {
@@ -78,10 +79,10 @@ csr_matrix coordinates_to_csr(unsigned int n,
 
 
 
-bool comp_first(const std::pair<unsigned int, unsigned int> &a, const std::pair<unsigned int, unsigned int> &b)
+bool comp_first(const std::tuple<unsigned int, unsigned int, float> &a, const std::tuple<unsigned int, unsigned int, float> &b)
 {
-//    return (std::get<0>(a) < std::get<0>(b));
-    return a.first < b.first;
+    return (std::get<0>(a) < std::get<0>(b));
+//    return a.first < b.first;
 }
 
 csr_matrix transpose(csr_matrix matrix)
@@ -89,7 +90,6 @@ csr_matrix transpose(csr_matrix matrix)
     auto &ind = matrix.ind;
     auto &cols = matrix.cols;
     auto &weights = matrix.weights;
-
     std::vector<unsigned int> tmp_new_cols(cols.size());
     for(unsigned i = 0; i < ind.size()-1; ++i)
     {
@@ -99,33 +99,33 @@ csr_matrix transpose(csr_matrix matrix)
         }
     }
 
-    std::vector<std::pair<unsigned int, std::pair<unsigned int, float>>> target(cols.size());
-    for (unsigned i = 0; i < target.size(); i++){
-        target[i] = std::make_pair(cols[i], std::make_pair(tmp_new_cols[i], weights[i]));
+    std::vector<std::tuple<unsigned int, unsigned int, float>> target(cols.size());
+    for (unsigned i = 0; i < target.size(); ++i){
+          std::make_tuple(cols[i], tmp_new_cols[i], weights[i]);
+          target[i] = std::make_tuple(cols[i], tmp_new_cols[i], weights[i]);
     }
-
     std::sort(target.begin(), target.end(), comp_first);
     std::vector<unsigned int> new_cols;
     std::vector<float> reordered_weights;
-
+    //// do it in one loop
     std::transform(target.begin(), target.end(),
                    std::back_inserter(new_cols),
-//                   [](auto const& pair){ return std::get<1>(pair); });
-                   [](auto const& pair){ return pair.second.first; });
+                   [](auto const& pair){ return std::get<1>(pair); });
     std::transform(target.begin(), target.end(),
                    std::back_inserter(reordered_weights),
-//                   [](auto const& pair){ return std::get<2>(pair); });
-                   [](auto const& pair){ return pair.second.second; });
+                   [](auto const& pair){ return std::get<2>(pair); });
 
 
-
+    std::vector<unsigned int> cp_cols;
+    cp_cols = cols;
     std::sort(cols.begin(), cols.end());
+
     unsigned int uniqueCount = std::unique(cols.begin(), cols.end()) - cols.begin();
     std::vector<unsigned int> new_ind;
-    new_ind.resize(uniqueCount, 0);
-    for(unsigned i = 0; i < cols.size(); ++i){
-        std::vector<unsigned int> ones(ind.size()-cols[i]+1 ,1);
-        std::transform (new_ind.begin()+cols[i]+1, new_ind.end(), ones.begin(), new_ind.begin()+cols[i]+1, std::plus<int>());
+    new_ind.resize(uniqueCount+1, 0);
+    for(unsigned i = 0; i < cp_cols.size(); ++i){
+        std::vector<unsigned int> ones(new_ind.size()-cp_cols[i]+1 ,1);
+        std::transform (new_ind.begin()+cp_cols[i]+1, new_ind.end(), ones.begin(), new_ind.begin()+cp_cols[i]+1, std::plus<int>());
     }
 
     matrix.weights = reordered_weights;
@@ -136,9 +136,10 @@ csr_matrix transpose(csr_matrix matrix)
 
 int main() {
     csr_matrix m;
-    m.cols = {0,1,1,3,2,3,4,5};
-    m.weights = {10.,20.,30.,40.,50.,60.,70.,80.};
-    m.ind = {0,2,4,7,8};
+    m.cols = {0,1,5,1,3,2,3,4,5};
+    m.weights = {10.,20.,25.,30.,40.,50.,60.,70.,80.};
+    m.ind = {0,3,5,8,9};
+//    m.ind = {0,2,4,7,8};
     for(auto & i: m.ind){
         std::cout << i << " ";
     }
@@ -150,6 +151,23 @@ int main() {
     std::cout << std::endl;
 
     for(auto & i: m.weights){
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+
+    csr_matrix m2 = transpose(m);
+
+    for(auto & i: m2.ind){
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+
+    for(auto & i: m2.cols){
+        std::cout << i << " ";
+    }
+    std::cout << std::endl;
+
+    for(auto & i: m2.weights){
         std::cout << i << " ";
     }
     std::cout << std::endl;
