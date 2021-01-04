@@ -134,69 +134,86 @@ csr_matrix transpose(csr_matrix matrix)
     return matrix;
 }
 
-int main() {
-    csr_matrix m;
-    m.cols = {0,1,5,1,3,2,3,4,5};
-    m.weights = {10.,20.,25.,30.,40.,50.,60.,70.,80.};
-    m.ind = {0,3,5,8,9};
-//    m.ind = {0,2,4,7,8};
-    for(auto & i: m.ind){
-        std::cout << i << " ";
+template<typename T>
+struct prio_cmp {
+    prio_cmp(std::vector<u_int32_t> p) {
+        this->prios = p;
+    };
+    auto operator()(const T first, const T second) const {
+        return prios[first] < prios[second];
     }
-    std::cout << std::endl;
+    std::vector<u_int32_t> prios;
+};
 
-    for(auto & i: m.cols){
-        std::cout << i << " ";
-    }
-    std::cout << std::endl;
+std::vector<int> dijkstra(const csr_matrix& graph, int source){
+    std::vector<u_int32_t> prios {1,2,3};
+    prio_cmp<u_int32_t> cmp(prios);
 
-    for(auto & i: m.weights){
-        std::cout << i << " ";
-    }
-    std::cout << std::endl;
+    DAryAddressableIntHeap<u_int32_t, 2, decltype(cmp)> Q(cmp);
+    //    std::priority_queue()
+//    typedef PQ< std::pair<int,int>, std::vector<int>, prio_cmp<int> > IntPQ;
+    std::vector<u_int32_t> dist(graph.n, UINT32_MAX-1); // Unknown distance from source to v
+    std::vector<int32_t> prev(graph.n, UINT32_MAX-1); //Predecessor of v
+    dist[source] = 0;
+    prev[source] = -1;
 
-    csr_matrix m2 = transpose(m);
-
-    for(auto & i: m2.ind){
-        std::cout << i << " ";
-    }
-    std::cout << std::endl;
-
-    for(auto & i: m2.cols){
-        std::cout << i << " ";
-    }
-    std::cout << std::endl;
-
-    for(auto & i: m2.weights){
-        std::cout << i << " ";
-    }
-    std::cout << std::endl;
-    return (int)0;
+//    typename prio_cmp::operator o;
+//    DAryAddressableIntHeap<unsigned int, 2> Q;
+//    Q.push(1);
+//    Q.extract_top();
+    //foreach v in graph do: Q.add_with_priority(v, dist[v])
+//    14     while Q is not empty:                      // The main loop
+//    15         u ← Q.extract_min()                    // Remove and return best vertex
+//    16         for each neighbor v of u:              // only v that are still in Q
+//    17             alt ← dist[u] + length(u, v)
+//    18             if alt < dist[v]
+//    19                 dist[v] ← alt
+//    20                 prev[v] ← u
+//    21                 Q.decrease_priority(v, alt)
+//    return dist, prev
+    std::cout << graph.m << std::endl;
+    return {1,2,3};
 }
 
-int main2(int argc, char **argv) {
-	std::ifstream ins("foodweb-baydry.konect");
-	std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
-	std::mt19937 prng{42};
-	std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
-	read_graph_unweighted(ins, [&] (unsigned int u, unsigned int v) {
-		// Generate a random edge weight in [a, b).
-		cv.push_back({u, v, distrib(prng)});
-	});
+int main(int argc, char **argv) {
+    std::vector<u_int32_t> prios {0,0,0,8,0,4,0,7,8};
 
-	// Determine n as the maximal node ID.
-	unsigned int n = 0;
-	for(auto ct : cv) {
-		auto u = std::get<0>(ct);
-		auto v = std::get<1>(ct);
-		if(u > n)
-			n = u;
-		if(v > n)
-			n = v;
-	}
+    prio_cmp<u_int32_t> cmp(prios);
 
-	auto mat = coordinates_to_csr(n, std::move(cv));
+    DAryAddressableIntHeap<u_int32_t, 4, decltype(cmp)> Q(cmp);
 
-	std::cout << mat.n << " " << mat.m << std::endl;
-	return 0;
+//    Q.push(1);
+//    Q.push(2);
+//    Q.push(3);
+    Q.build_heap({3,5,7});
+    Q.update_all();
+    std::cout << Q.extract_top() << std::endl;
+
+    std::cout << Q.extract_top() << std::endl;
+    std::cout << Q.extract_top() << std::endl;
+
+//	std::ifstream ins("foodweb-baydry.konect");
+//	std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
+//	std::mt19937 prng{42};
+//	std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
+//	read_graph_unweighted(ins, [&] (unsigned int u, unsigned int v) {
+//		// Generate a random edge weight in [a, b).
+//		cv.push_back({u, v, distrib(prng)});
+//	});
+//
+//	// Determine n as the maximal node ID.
+//	unsigned int n = 0;
+//	for(auto ct : cv) {
+//		auto u = std::get<0>(ct);
+//		auto v = std::get<1>(ct);
+//		if(u > n)
+//			n = u;
+//		if(v > n)
+//			n = v;
+//	}
+//
+//	auto mat = coordinates_to_csr(n, std::move(cv));
+//
+//	std::cout << mat.n << " " << mat.m << std::endl;
+//	return 0;
 }
