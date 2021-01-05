@@ -7,7 +7,6 @@
 #include <string>
 #include <tuple>
 #include <vector>
-#include <execution>
 #include "d_ary_addressable_int_heap.hpp"
 
 template<typename F>
@@ -122,7 +121,6 @@ csr_matrix transpose(csr_matrix matrix)
     unsigned int uniqueCount = std::unique(cols.begin(), cols.end()) - cols.begin();
     std::vector<unsigned int> new_ind;
     new_ind.resize(uniqueCount+1+1, 0);
-    int ix = 0;
     for(unsigned i = 0; i < cp_cols.size(); ++i){
         std::vector<unsigned int> ones(new_ind.size()-cp_cols[i]+1 ,1);
         std::transform (new_ind.begin()+cp_cols[i]+1, new_ind.end(), ones.begin(), new_ind.begin()+cp_cols[i]+1, std::plus<int>());
