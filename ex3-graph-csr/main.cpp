@@ -127,7 +127,6 @@ csr_matrix transpose(csr_matrix matrix)
         std::vector<unsigned int> ones(new_ind.size()-cp_cols[i]+1 ,1);
         std::transform (new_ind.begin()+cp_cols[i]+1, new_ind.end(), ones.begin(), new_ind.begin()+cp_cols[i]+1, std::plus<int>());
     }
-
     matrix.weights = reordered_weights;
     matrix.cols = new_cols;
     matrix.ind = new_ind;
@@ -136,31 +135,54 @@ csr_matrix transpose(csr_matrix matrix)
 
 template<typename T>
 struct prio_cmp {
-    prio_cmp(std::vector<u_int32_t> p) {
-        this->prios = p;
+    //pass it by reference - so that the compare class can be updated...
+    //not coming from a c++ background - but feels like not very good practice
+    std::vector<u_int32_t> &prios;
+
+    prio_cmp(std::vector<u_int32_t> &prios) : prios(prios) {
     };
     auto operator()(const T first, const T second) const {
         return prios[first] < prios[second];
     }
-    std::vector<u_int32_t> prios;
 };
 
-std::vector<int> dijkstra(const csr_matrix& graph, int source){
-    std::vector<u_int32_t> prios {1,2,3};
-    prio_cmp<u_int32_t> cmp(prios);
+std::vector<int> dijkstra(const csr_matrix& matrix, int source, const unsigned int d){
+    //n = knoten
+    //m = transitionen
 
-    DAryAddressableIntHeap<u_int32_t, 2, decltype(cmp)> Q(cmp);
-    //    std::priority_queue()
-//    typedef PQ< std::pair<int,int>, std::vector<int>, prio_cmp<int> > IntPQ;
-    std::vector<u_int32_t> dist(graph.n, UINT32_MAX-1); // Unknown distance from source to v
-    std::vector<int32_t> prev(graph.n, UINT32_MAX-1); //Predecessor of v
+    std::vector<u_int32_t> dist(matrix.n, UINT32_MAX); // Unknown distance from source to v
+    std::vector<int32_t> prev(matrix.n, UINT32_MAX); //Predecessor of v
     dist[source] = 0;
     prev[source] = -1;
+    prio_cmp<u_int32_t> cmp(dist);
+    //uff it took me years to achieve that with my own compare struct
+    // + I actually wanted a dynamic arity based on m/n - didnt get this to work as it expects a constexpr
+    DAryAddressableIntHeap<u_int32_t, 2, decltype(cmp)> Q(cmp);
 
-//    typename prio_cmp::operator o;
-//    DAryAddressableIntHeap<unsigned int, 2> Q;
-//    Q.push(1);
-//    Q.extract_top();
+    for(int v = 0; v<matrix.n; ++v){
+        Q.push(v);
+    }
+    u_int32_t u = 0;
+    while(!Q.empty()){
+//        for(int i = 1; i < matrix.ind.size(); ++i){
+        u = Q.extract_top();
+        auto colStart = matrix.ind[u-1];
+        auto colEnd = matrix.ind[u];
+        for(int j = colStart; j < colEnd; j++){
+            //j's are basically all outgoing edges from u: [u]-j-[v]
+            auto v = matrix.cols[j]; //v
+            auto w = matrix.weights[j]; //dist
+            auto alt = dist[u] + w;
+            if(alt < dist[v]){
+                dist[v] = alt;
+                prev[v] = u;
+            }
+            dist[v] = dist[u] + w;
+            //update somewhere
+            //now we have a value for a col-row-coordinate
+        }
+    }
+
     //foreach v in graph do: Q.add_with_priority(v, dist[v])
 //    14     while Q is not empty:                      // The main loop
 //    15         u ← Q.extract_min()                    // Remove and return best vertex
@@ -171,28 +193,28 @@ std::vector<int> dijkstra(const csr_matrix& graph, int source){
 //    20                 prev[v] ← u
 //    21                 Q.decrease_priority(v, alt)
 //    return dist, prev
-    std::cout << graph.m << std::endl;
+//    std::cout << graph.m << std::endl;
     return {1,2,3};
+}
+constexpr unsigned someCE(int xxx){
+    return xxx/xxx;
 }
 
 int main(int argc, char **argv) {
-    std::vector<u_int32_t> prios {0,0,0,8,0,4,0,7,8};
-
+    std::vector<u_int32_t> prios {0,0,0,3,0,5,0,7,8};
     prio_cmp<u_int32_t> cmp(prios);
-
     DAryAddressableIntHeap<u_int32_t, 4, decltype(cmp)> Q(cmp);
 
-//    Q.push(1);
-//    Q.push(2);
-//    Q.push(3);
     Q.build_heap({3,5,7});
-    Q.update_all();
-    std::cout << Q.extract_top() << std::endl;
+    prios[3]=9;
+    std::cout <<cmp.prios[3] << std::endl;
+//    Q.update_all();
+    Q.update(3);
+    while(!Q.empty()){
+        std::cout << Q.extract_top() << " ";
+    }
 
-    std::cout << Q.extract_top() << std::endl;
-    std::cout << Q.extract_top() << std::endl;
-
-//	std::ifstream ins("foodweb-baydry.konect");
+//    std::ifstream ins("../foodweb-baydry.konect");
 //	std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
 //	std::mt19937 prng{42};
 //	std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
@@ -214,6 +236,8 @@ int main(int argc, char **argv) {
 //
 //	auto mat = coordinates_to_csr(n, std::move(cv));
 //
+//    unsigned int const& const_n = n;
 //	std::cout << mat.n << " " << mat.m << std::endl;
-//	return 0;
+	return 0;
 }
+
