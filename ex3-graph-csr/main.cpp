@@ -1,3 +1,4 @@
+#include <omp.h>
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -24,10 +25,10 @@ void read_graph_unweighted(std::istream &ins, F fn) {
 		if (!(ls >> u >> v))
 			throw std::runtime_error("Parse error while reading input graph");
 
-//		if(!seen_header) {
-//			seen_header = true;
-//			continue;
-//		}
+		if(!seen_header) {
+			seen_header = true;
+			continue;
+		}
 
 		fn(u, v);
 	}
@@ -76,117 +77,17 @@ csr_matrix coordinates_to_csr(unsigned int n,
 	return mat;
 }
 
-
-
-bool comp_first(const std::tuple<unsigned int, unsigned int, float> &a, const std::tuple<unsigned int, unsigned int, float> &b)
-{
-    return (std::get<0>(a) < std::get<0>(b));
-}
-
-csr_matrix transpose(const csr_matrix& matrix)
-{
-    csr_matrix transposed;
-    int n = *std::max_element(matrix.cols.begin(), matrix.cols.end());
-
-    transposed.n = n;
-    transposed.m = matrix.m;
-    transposed.ind.resize(transposed.n + 1, 0);
-    transposed.weights.resize(transposed.m, 0.0);
-    auto &ind = matrix.ind;
-    auto cols = matrix.cols;
-    auto &weights = matrix.weights;
-
-    transposed.cols.resize(transposed.m, 0);
-    // Count the number of neighbors of each node.
-    for(auto c : cols) {
-        ++transposed.ind[c+1];
-    }
-    // Form the prefix sum.
-    for(unsigned int i = 1; i <= transposed.n; ++i)
-        transposed.ind[i] += transposed.ind[i - 1];
-//    assert(transposed.ind[transposed.n] == transposed.m);
-
-    for (int i = 0; i < matrix.n; ++i) {
-        for (int j = matrix.ind[i]; j < matrix.ind[i + 1]; ++j) {
-            // calculate index to transposed matrix at which we should place current element, and at the same time build final rowPtr
-            const int new_index = transposed.ind[matrix.cols[j] + 1]++;
-            transposed.weights[new_index] = matrix.weights[j];
-            transposed.cols[new_index] = i;
-        }
-    }
-//    std::vector<std::tuple<unsigned int, unsigned int, float>> target(cols.size());
-//    for (unsigned i = 0; i < target.size(); ++i){
-//          target[i] = std::make_tuple(cols[i], transposed.cols[i], transposed.weights[i]);
-//    }
-//
-//    std::sort(target.begin(), target.end(), comp_first);
-//
-//    for(unsigned i = 0; i < target.size(); ++i){
-//        auto const& triple = target[i];
-//        transposed.cols[i] = std::get<1>(triple);
-//        transposed.weights[i] = std::get<2>(triple);
-//    }
-
-    return transposed;
-}
-
 template<typename T>
 struct prio_cmp {
-    //pass it by reference - so that the compare class can be updated...
-    //not coming from a c++ background - but feels like not very good practice
     std::vector<float> &prios;
-
-    prio_cmp(std::vector<float> &prios) : prios(prios) {
-    };
+    prio_cmp(std::vector<float> &prios) : prios(prios) {};
     auto operator()(const T first, const T second) const {
         return prios[first] < prios[second];
     }
 };
 
-csr_matrix transpose2(csr_matrix matrix){
-    auto &ind = matrix.ind;
-    auto &cols = matrix.cols;
-    auto &weights = matrix.weights;
-    std::vector<unsigned int> tmp_new_cols(cols.size());
-    for(unsigned i = 0; i < ind.size()-1; ++i)
-    {
-        for(unsigned c = 0; c < ind[i+1]-ind[i]; ++c)
-        {
-            tmp_new_cols[ind[i]+c] = i;
-        }
-    }
-    std::vector<std::tuple<unsigned int, unsigned int, float>> target(cols.size());
-    for (unsigned i = 0; i < target.size(); ++i){
-        std::make_tuple(cols[i], tmp_new_cols[i], weights[i]);
-        target[i] = std::make_tuple(cols[i], tmp_new_cols[i], weights[i]);
-    }
-    std::sort(target.begin(), target.end(), comp_first);
-    std::vector<unsigned int> new_cols;
-    std::vector<float> reordered_weights;
-    //// do it in one loop
-    std::transform(target.begin(), target.end(),
-                   std::back_inserter(new_cols),
-                   [](auto const& pair){ return std::get<1>(pair); });
-    std::transform(target.begin(), target.end(),
-                   std::back_inserter(reordered_weights),
-                   [](auto const& pair){ return std::get<2>(pair); });
 
-
-    std::vector<unsigned int> new_ind;
-    int real_max = *std::max_element(cols.begin(), cols.end());
-    new_ind.resize(real_max+2, 0);
-    for(unsigned i = 0; i < cols.size(); ++i){
-        std::vector<unsigned int> ones(new_ind.size()-cols[i]+1 ,1);
-        std::transform (new_ind.begin()+cols[i]+1, new_ind.end(), ones.begin(), new_ind.begin()+cols[i]+1, std::plus<int>());
-    }
-    csr_matrix transposed;
-    transposed.m = matrix.m;
-    transposed.n = real_max;
-    transposed.weights = reordered_weights;
-    transposed.cols = new_cols;
-    transposed.ind = new_ind;
-    return transposed;
-}
+//7b implementation
 std::vector<u_int32_t> dijkstra(const csr_matrix& matrix, int source){
     std::vector<float> dist(matrix.n, 500000.0); // Unknown distance from source to v
     std::vector<u_int32_t> prev(matrix.n, UINT32_MAX-1); //Predecessor of v
@@ -199,11 +100,10 @@ std::vector<u_int32_t> dijkstra(const csr_matrix& matrix, int source){
 
     //hand a reference to the distances to the priority comparison struct
     prio_cmp<float> cmp(dist);
-    //100% tilt mode... this took so long to find out how to pass my custom comparison...
     DAryAddressableIntHeap<u_int32_t, 2, decltype(cmp)> Q(cmp);
     //now add all nodes to
     //Q - (would normally not name a variable with a capital letter.. but I somehow wanted to stick to pseudocode
-    for(int v = 0; v<matrix.n; ++v){
+    for(unsigned int v = 0; v<matrix.n; ++v){
         Q.push(v);
     }
     u_int32_t u;
@@ -211,7 +111,7 @@ std::vector<u_int32_t> dijkstra(const csr_matrix& matrix, int source){
         u = Q.extract_top();
         auto colStart = ind[u];
         auto colEnd = ind[u+1];
-        for(int j = colStart; j < colEnd; j++){
+        for(unsigned int j = colStart; j < colEnd; j++){
             //j's are basically all outgoing edges from u: [u]-j-[v]
             auto v = cols[j]; //v
             auto w = weights[j]; //dist
@@ -228,8 +128,65 @@ std::vector<u_int32_t> dijkstra(const csr_matrix& matrix, int source){
 
     return prev;
 }
+
+//7a)
+bool comp_first(const std::tuple<unsigned int, unsigned int, float> &a, const std::tuple<unsigned int, unsigned int, float> &b)
+{
+    return (std::get<0>(a) < std::get<0>(b));
+}
+
+csr_matrix transpose(csr_matrix matrix){
+    auto &ind = matrix.ind;
+    auto &cols = matrix.cols;
+    auto &weights = matrix.weights;
+    std::vector<unsigned int> tmp_new_cols(cols.size());
+    #pragma omp parallel for
+    for(unsigned i = 0; i < ind.size()-1; ++i)
+    {
+        for(unsigned j = ind[i]; j < ind[i+1]; ++j)
+        {
+            tmp_new_cols[j] = i;
+        }
+    }
+    std::vector<std::tuple<unsigned int, unsigned int, float>> target(cols.size());
+    #pragma omp parallel for
+    for (unsigned i = 0; i < target.size(); ++i){
+        std::make_tuple(cols[i], tmp_new_cols[i], weights[i]);
+        target[i] = std::make_tuple(cols[i], tmp_new_cols[i], weights[i]);
+    }
+    std::sort(target.begin(), target.end(), comp_first);
+    std::vector<unsigned int> new_cols(target.size());
+    std::vector<float> reordered_weights(target.size());
+    //// do it in one loop
+    #pragma omp parallel for
+    for(unsigned int t = 0; t < target.size(); ++t){
+        new_cols[t] = std::get<1>(target[t]);
+        reordered_weights[t] = std::get<2>(target[t]);
+    }
+
+    std::vector<unsigned int> new_ind;
+    int real_max = *std::max_element(cols.begin(), cols.end());
+    new_ind.resize(real_max+2, 0);
+    for(unsigned i = 0; i < cols.size(); ++i){
+        std::vector<unsigned int> ones(new_ind.size()-cols[i]+1 ,1);
+        std::transform (new_ind.begin()+cols[i]+1, new_ind.end(), ones.begin(), new_ind.begin()+cols[i]+1, std::plus<int>());
+    }
+    csr_matrix transposed;
+    transposed.m = matrix.m;
+    transposed.n = real_max;
+    transposed.weights = reordered_weights;
+    transposed.cols = new_cols;
+    transposed.ind = new_ind;
+    return transposed;
+}
+
+
 int main(int argc, char **argv) {
-    std::ifstream ins("../foodweb-baydry.konect2");
+    omp_set_num_threads(4);
+    //std::ifstream ins("../foodweb-baydry.konect2");
+    std::ifstream ins("../cit-patent/cit-patent.edges");
+    //std::ifstream ins("../roadNet-TX/roadNet-TX.mtx");
+    //std::ifstream ins("../foodweb-baydry.konect");
     std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
     std::mt19937 prng{42};
     std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
@@ -251,17 +208,8 @@ int main(int argc, char **argv) {
 
     auto mat = coordinates_to_csr(n+1, std::move(cv));
 
-    csr_matrix transposed = transpose2(mat);
+    csr_matrix transposed = transpose(mat);
 
-    csr_matrix retransposed = transpose2(transposed);
-    if(mat.ind == retransposed.ind){
-        printf("Yes");
-    }
-//    std::sort(mat.cols.begin(), mat.cols.end());
-//    std::sort(retransposed.cols.begin(), retransposed.cols.end());
-    if(mat.cols == retransposed.cols){
-        printf("Yes");
-    }
     return 0;
 }
 int main2(int argc, char **argv) {
