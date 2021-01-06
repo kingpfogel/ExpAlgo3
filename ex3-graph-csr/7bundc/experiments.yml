@@ -1,0 +1,44 @@
+builds:
+  - name: dijkstra
+    git: none
+    configure:
+      - args:
+          - 'meson'
+          - '--prefix=@THIS_PREFIX_DIR@'
+          - '--buildtype=debugoptimized'
+          - '@THIS_SOURCE_DIR@'
+    compile:
+      - args: ['ninja']
+    install:
+      - args: ['ninja', 'install']
+
+revisions:
+  - develop: true
+    build_version:
+      'dijkstra': ''
+
+experiments:
+  - name: dijkstra
+    use_builds: [dijkstra]
+    args: ['dijkstra', '@EXTRA_ARGS@']
+    stdout: out
+
+variants:
+  - axis: runs
+    items:
+      - name: runs1
+        extra_args: ['--random-run', '1']
+      - name: runs1000
+        extra_args: ['--random-run', '1000']
+  - axis: file
+    items:
+      - name: roadnet
+        extra_args: [ '--file', 'roadNet-TX.mtx' ]
+      - name: patent
+        extra_args: [ '--file', 'cit-patent' ]
+
+# Simexpal wants an "instance" file, so we add an empty dummy file.
+instances:
+  - repo: local
+    items:
+      - dummy
