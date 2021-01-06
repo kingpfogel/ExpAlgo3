@@ -3,6 +3,7 @@
 #include <cassert>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 #include <random>
 #include <sstream>
 #include <string>
