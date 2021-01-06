@@ -2,7 +2,7 @@ project('expalgo-csr', 'cpp')
 
 omp = dependency('openmp')
 
-executable('csr',
+executable('transpose',
 	'main.cpp',
 	override_options: ['cpp_std=c++17'],
 	dependencies: omp,

@@ -77,58 +77,6 @@ csr_matrix coordinates_to_csr(unsigned int n,
 	return mat;
 }
 
-template<typename T>
-struct prio_cmp {
-    std::vector<float> &prios;
-    prio_cmp(std::vector<float> &prios) : prios(prios) {};
-    auto operator()(const T first, const T second) const {
-        return prios[first] < prios[second];
-    }
-};
-
-
-//7b implementation
-std::vector<u_int32_t> dijkstra(const csr_matrix& matrix, int source){
-    std::vector<float> dist(matrix.n, 500000.0); // Unknown distance from source to v
-    std::vector<u_int32_t> prev(matrix.n, UINT32_MAX-1); //Predecessor of v
-    auto &ind = matrix.ind;
-    auto &cols = matrix.cols;
-    auto &weights = matrix.weights;
-    //now update source nodes
-    dist[source] = 0;
-    prev[source] = 0;
-
-    //hand a reference to the distances to the priority comparison struct
-    prio_cmp<float> cmp(dist);
-    DAryAddressableIntHeap<u_int32_t, 2, decltype(cmp)> Q(cmp);
-    //now add all nodes to
-    //Q - (would normally not name a variable with a capital letter.. but I somehow wanted to stick to pseudocode
-    for(unsigned int v = 0; v<matrix.n; ++v){
-        Q.push(v);
-    }
-    u_int32_t u;
-    while(!Q.empty()){
-        u = Q.extract_top();
-        auto colStart = ind[u];
-        auto colEnd = ind[u+1];
-        for(unsigned int j = colStart; j < colEnd; j++){
-            //j's are basically all outgoing edges from u: [u]-j-[v]
-            auto v = cols[j]; //v
-            auto w = weights[j]; //dist
-            auto alt = dist[u] + w;
-            if(alt < dist[v]){
-                dist[v] = alt;
-                prev[v] = u;
-                Q.update(v);
-            }
-
-        }
-
-    }
-
-    return prev;
-}
-
 //7a)
 bool comp_first(const std::tuple<unsigned int, unsigned int, float> &a, const std::tuple<unsigned int, unsigned int, float> &b)
 {
@@ -182,11 +130,7 @@ csr_matrix transpose(csr_matrix matrix){
 
 
 int main(int argc, char **argv) {
-    omp_set_num_threads(4);
-    //std::ifstream ins("../foodweb-baydry.konect2");
-    std::ifstream ins("../cit-patent/cit-patent.edges");
-    //std::ifstream ins("../roadNet-TX/roadNet-TX.mtx");
-    //std::ifstream ins("../foodweb-baydry.konect");
+    std::ifstream ins("../cit-patent.edges");
     std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
     std::mt19937 prng{42};
     std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
@@ -205,43 +149,24 @@ int main(int argc, char **argv) {
         if(v > n)
             n = v;
     }
-
+    //somehow this did not work correctly without the +1...
     auto mat = coordinates_to_csr(n+1, std::move(cv));
 
+
+    auto start = std::chrono::high_resolution_clock::now();
     csr_matrix transposed = transpose(mat);
+    auto t = std::chrono::high_resolution_clock::now() - start;
 
+    std::cout << "threads: " << omp_get_num_threads << std::endl;
+    std::cout << "time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(t).count()
+              << " # ms" << std::endl;
+
+    //csr_matrix transposed_again = transpose(transposed);
+    //sanity control
+    //sort transposed.cols and transposed_again.cols
+    //compare transposed.cols == transposed_again.cols
+    //compare transposed.ind == transposed_again.ind
     return 0;
-}
-int main2(int argc, char **argv) {
-
-//    std::ifstream ins("../cit-patent/cit-patent.edges");
-    std::ifstream ins("../roadNet-TX/roadNet-TX.mtx");
-//    std::ifstream ins("../foodweb-baydry.konect");
-	std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
-	std::mt19937 prng{42};
-	std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
-	read_graph_unweighted(ins, [&] (unsigned int u, unsigned int v) {
-		// Generate a random edge weight in [a, b).
-		cv.push_back({u, v, distrib(prng)});
-	});
-
-	// Determine n as the maximal node ID.
-	unsigned int n = 0;
-	for(auto ct : cv) {
-		auto u = std::get<0>(ct);
-		auto v = std::get<1>(ct);
-		if(u > n)
-			n = u;
-		if(v > n)
-			n = v;
-	}
-
-	auto mat = coordinates_to_csr(n, std::move(cv));
-
-//    auto prev = dijkstra(mat, 1 );
-    auto transposedMatrix = transpose(mat);
-
-    //std::cout << mat.n << " " << mat.m << std::endl;
-	return 0;
 }
 

@@ -129,64 +129,40 @@ std::vector<u_int32_t> dijkstra(const csr_matrix& matrix, int source){
     return prev;
 }
 
-//7a)
-bool comp_first(const std::tuple<unsigned int, unsigned int, float> &a, const std::tuple<unsigned int, unsigned int, float> &b)
-{
-    return (std::get<0>(a) < std::get<0>(b));
-}
+int main(int argc, char **argv) {
+    int random_runs = 1;
+    string file;
+    const char *arg;
+    char **p = argv + 1;
 
-csr_matrix transpose(csr_matrix matrix){
-    auto &ind = matrix.ind;
-    auto &cols = matrix.cols;
-    auto &weights = matrix.weights;
-    std::vector<unsigned int> tmp_new_cols(cols.size());
-    #pragma omp parallel for
-    for(unsigned i = 0; i < ind.size()-1; ++i)
-    {
-        for(unsigned j = ind[i]; j < ind[i+1]; ++j)
-        {
-            tmp_new_cols[j] = i;
+    auto handle_unary_option = [&] (const char *name) -> bool {
+        assert(*p);
+        if(std::strcmp(*p, name))
+            return false;
+        ++p;
+        if(!(*p))
+            error("expected argument for unary option");
+        arg = *p;
+        ++p;
+        return true;
+    };
+
+    while(*p && !std::strncmp(*p, "--", 2)) {
+        if(handle_unary_option("--random-runs")) {
+            random_runs = atoi(arg);
+        }else if(handle_unary_option("--file")) {
+            string = arg;
+        }else{
+            error("unknown command line option");
         }
     }
-    std::vector<std::tuple<unsigned int, unsigned int, float>> target(cols.size());
-    #pragma omp parallel for
-    for (unsigned i = 0; i < target.size(); ++i){
-        std::make_tuple(cols[i], tmp_new_cols[i], weights[i]);
-        target[i] = std::make_tuple(cols[i], tmp_new_cols[i], weights[i]);
-    }
-    std::sort(target.begin(), target.end(), comp_first);
-    std::vector<unsigned int> new_cols(target.size());
-    std::vector<float> reordered_weights(target.size());
-    //// do it in one loop
-    #pragma omp parallel for
-    for(unsigned int t = 0; t < target.size(); ++t){
-        new_cols[t] = std::get<1>(target[t]);
-        reordered_weights[t] = std::get<2>(target[t]);
-    }
-
-    std::vector<unsigned int> new_ind;
-    int real_max = *std::max_element(cols.begin(), cols.end());
-    new_ind.resize(real_max+2, 0);
-    for(unsigned i = 0; i < cols.size(); ++i){
-        std::vector<unsigned int> ones(new_ind.size()-cols[i]+1 ,1);
-        std::transform (new_ind.begin()+cols[i]+1, new_ind.end(), ones.begin(), new_ind.begin()+cols[i]+1, std::plus<int>());
-    }
-    csr_matrix transposed;
-    transposed.m = matrix.m;
-    transposed.n = real_max;
-    transposed.weights = reordered_weights;
-    transposed.cols = new_cols;
-    transposed.ind = new_ind;
-    return transposed;
-}
+    if(*p)
+        error("unexpected arguments");
 
 
-int main(int argc, char **argv) {
-    omp_set_num_threads(4);
-    //std::ifstream ins("../foodweb-baydry.konect2");
-    std::ifstream ins("../cit-patent/cit-patent.edges");
-    //std::ifstream ins("../roadNet-TX/roadNet-TX.mtx");
-    //std::ifstream ins("../foodweb-baydry.konect");
+
+
+    std::ifstream ins(string);
     std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
     std::mt19937 prng{42};
     std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
@@ -206,42 +182,21 @@ int main(int argc, char **argv) {
             n = v;
     }
 
-    auto mat = coordinates_to_csr(n+1, std::move(cv));
+    std::mt19937 prng2{87};
+    std::uniform_int_distribution<float> distrib2{1, n};
 
-    csr_matrix transposed = transpose(mat);
+    auto start = std::chrono::high_resolution_clock::now();
+    for(auto i = 0; i < random_runs; ++i){
+        auto prev = dijkstra(mat, distrib2(prng2));
+    }
+    auto t = std::chrono::high_resolution_clock::now() - start;
+
+    std::cout << "random_runs: " << random_runs << std::endl;
+    std::cout << "file: " << file << std::endl;
+    std::cout << "time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(t).count()
+              << " # ms" << std::endl;
+
 
     return 0;
 }
-int main2(int argc, char **argv) {
-
-//    std::ifstream ins("../cit-patent/cit-patent.edges");
-    std::ifstream ins("../roadNet-TX/roadNet-TX.mtx");
-//    std::ifstream ins("../foodweb-baydry.konect");
-	std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
-	std::mt19937 prng{42};
-	std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
-	read_graph_unweighted(ins, [&] (unsigned int u, unsigned int v) {
-		// Generate a random edge weight in [a, b).
-		cv.push_back({u, v, distrib(prng)});
-	});
-
-	// Determine n as the maximal node ID.
-	unsigned int n = 0;
-	for(auto ct : cv) {
-		auto u = std::get<0>(ct);
-		auto v = std::get<1>(ct);
-		if(u > n)
-			n = u;
-		if(v > n)
-			n = v;
-	}
-
-	auto mat = coordinates_to_csr(n, std::move(cv));
-
-//    auto prev = dijkstra(mat, 1 );
-    auto transposedMatrix = transpose(mat);
-
-    //std::cout << mat.n << " " << mat.m << std::endl;
-	return 0;
-}
-
