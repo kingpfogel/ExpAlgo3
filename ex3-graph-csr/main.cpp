@@ -180,43 +180,9 @@ csr_matrix transpose(csr_matrix matrix){
     return transposed;
 }
 
-
 int main(int argc, char **argv) {
-    omp_set_num_threads(4);
-    //std::ifstream ins("../foodweb-baydry.konect2");
-    std::ifstream ins("../cit-patent/cit-patent.edges");
-    //std::ifstream ins("../roadNet-TX/roadNet-TX.mtx");
-    //std::ifstream ins("../foodweb-baydry.konect");
-    std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
-    std::mt19937 prng{42};
-    std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
-    read_graph_unweighted(ins, [&] (unsigned int u, unsigned int v) {
-        // Generate a random edge weight in [a, b).
-        cv.push_back({u, v, distrib(prng)});
-    });
 
-    // Determine n as the maximal node ID.
-    unsigned int n = 0;
-    for(auto ct : cv) {
-        auto u = std::get<0>(ct);
-        auto v = std::get<1>(ct);
-        if(u > n)
-            n = u;
-        if(v > n)
-            n = v;
-    }
-
-    auto mat = coordinates_to_csr(n+1, std::move(cv));
-
-    csr_matrix transposed = transpose(mat);
-
-    return 0;
-}
-int main2(int argc, char **argv) {
-
-//    std::ifstream ins("../cit-patent/cit-patent.edges");
-    std::ifstream ins("../roadNet-TX/roadNet-TX.mtx");
-//    std::ifstream ins("../foodweb-baydry.konect");
+    std::ifstream ins("../foodweb-baydry.konect");
 	std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
 	std::mt19937 prng{42};
 	std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
@@ -236,12 +202,10 @@ int main2(int argc, char **argv) {
 			n = v;
 	}
 
-	auto mat = coordinates_to_csr(n, std::move(cv));
+	auto mat = coordinates_to_csr(n+1, std::move(cv));
 
-//    auto prev = dijkstra(mat, 1 );
-    auto transposedMatrix = transpose(mat);
-
-    //std::cout << mat.n << " " << mat.m << std::endl;
+    auto prev = dijkstra(mat, 1 );
+    csr_matrix transposed = transpose(mat);
 	return 0;
 }
 
