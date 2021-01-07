@@ -134,7 +134,7 @@ std::vector<u_int32_t> dijkstra(const csr_matrix& matrix, int source){
 int main(int argc, char **argv) {
     int random_runs = 1;
 //    string file = "";
-    std::string file = "";
+    std::string_view file;
     const char *arg;
     char **p = argv + 1;
 
