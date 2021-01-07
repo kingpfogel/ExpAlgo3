@@ -33,9 +33,9 @@ variants:
   - axis: file
     items:
       - name: roadnet
-        extra_args: [ '--file', 'roadNet-TX.mtx' ]
+        extra_args: [ '--file', '../roadNet-TX.mtx' ]
       - name: patent
-        extra_args: [ '--file', 'cit-patent' ]
+        extra_args: [ '--file', '../cit-patent' ]
 
 # Simexpal wants an "instance" file, so we add an empty dummy file.
 instances:
