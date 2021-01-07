@@ -6,7 +6,7 @@
 #include <chrono>
 #include <random>
 #include <sstream>
-#include <cstream>
+#include <cstring>
 #include <string>
 #include <tuple>
 #include <vector>
