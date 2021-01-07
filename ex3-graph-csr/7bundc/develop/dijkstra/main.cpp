@@ -154,11 +154,11 @@ int main(int argc, char **argv) {
         }else if(handle_unary_option("--file")) {
             string = arg;
         }else{
-            error("unknown command line option");
+            std::cerr("unknown command line option");
         }
     }
     if(*p)
-        error("unexpected arguments");
+        std::cerr("unexpected arguments");
 
 
 
