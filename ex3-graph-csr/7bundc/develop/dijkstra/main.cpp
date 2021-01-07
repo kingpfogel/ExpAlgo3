@@ -183,6 +183,8 @@ int main(int argc, char **argv) {
             n = v;
     }
 
+    auto mat = coordinates_to_csr(n+1, std::move(cv));
+
     std::mt19937 prng2{14};
     std::uniform_int_distribution<float> distrib2{1, 20000000};
 
