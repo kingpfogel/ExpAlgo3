@@ -132,7 +132,7 @@ std::vector<u_int32_t> dijkstra(const csr_matrix& matrix, int source){
 
 int main(int argc, char **argv) {
     int random_runs = 1;
-    string file;
+    string file = "";
     const char *arg;
     char **p = argv + 1;
 
@@ -183,8 +183,8 @@ int main(int argc, char **argv) {
             n = v;
     }
 
-    std::mt19937 prng2{87};
-    std::uniform_int_distribution<float> distrib2{1, n};
+    std::mt19937 prng2{14};
+    std::uniform_int_distribution<float> distrib2{1, 20000000};
 
     auto start = std::chrono::high_resolution_clock::now();
     for(auto i = 0; i < random_runs; ++i){
@@ -197,7 +197,6 @@ int main(int argc, char **argv) {
     std::cout << "time: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(t).count()
               << " # ms" << std::endl;
-
 
     return 0;
 }
