@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
             return false;
         ++p;
         if(!(*p))
-            std::cerr("expected argument for unary option");
+            std::cerr << "expected argument for unary option" << std::endl;
         arg = *p;
         ++p;
         return true;
@@ -156,14 +156,10 @@ int main(int argc, char **argv) {
         }else if(handle_unary_option("--file")) {
             string = arg;
         }else{
-            std::cerr("unknown command line option");
         }
     }
     if(*p)
-        std::cerr("unexpected arguments");
-
-
-
+        std::cerr << "unexpected arguments" << std::endl;
 
     std::ifstream ins(string);
     std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
