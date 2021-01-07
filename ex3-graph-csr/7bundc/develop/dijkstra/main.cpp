@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
     if(*p)
         std::cerr << "unexpected arguments" << std::endl;
 
-    std::ifstream ins(string);
+    std::ifstream ins(file);
     std::vector<std::tuple<unsigned int, unsigned int, float>> cv;
     std::mt19937 prng{42};
     std::uniform_real_distribution<float> distrib{0.0f, 1.0f};
