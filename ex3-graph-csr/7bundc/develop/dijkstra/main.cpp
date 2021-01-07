@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
             return false;
         ++p;
         if(!(*p))
-            error("expected argument for unary option");
+            std::cerr("expected argument for unary option");
         arg = *p;
         ++p;
         return true;
