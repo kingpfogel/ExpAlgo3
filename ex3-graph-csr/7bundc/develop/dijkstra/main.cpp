@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
         if(handle_unary_option("--random-runs")) {
             random_runs = atoi(arg);
         }else if(handle_unary_option("--file")) {
-            string = arg;
+            file = arg;
         }else{
         }
     }
