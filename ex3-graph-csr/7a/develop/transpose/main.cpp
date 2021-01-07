@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
     csr_matrix transposed = transpose(mat);
     auto t = std::chrono::high_resolution_clock::now() - start;
 
-    std::cout << "threads: " << omp_get_num_threads << std::endl;
+    std::cout << "threads: " << omp_get_max_threads() << std::endl;
     std::cout << "time: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(t).count()
               << " # ms" << std::endl;
