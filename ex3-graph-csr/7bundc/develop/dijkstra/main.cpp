@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
     auto mat = coordinates_to_csr(n+1, std::move(cv));
 
     std::mt19937 prng2{14};
-    std::uniform_int_distribution<float> distrib2{1, 20000000};
+    std::uniform_int_distribution<int32_t> distrib2{1, 20000000};
 
     auto start = std::chrono::high_resolution_clock::now();
     for(auto i = 0; i < random_runs; ++i){
